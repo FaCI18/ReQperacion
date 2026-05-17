@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Reflex
+.web/
+frontend/
+reflex.db
+
+# Environment
+.env
+*.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose.yml
+mysql/
+
+# Git
+.git/
+.gitignore
+
+# Uploads (don't copy existing uploads into image)
+uploads/*
+
+# Docs
+plans/
+*.md
