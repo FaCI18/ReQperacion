@@ -100,3 +100,42 @@ def get_session():
     except Exception:
         db.close()
         raise
+
+
+def get_all_users() -> list[dict]:
+    """Get all registered users.
+
+    Returns:
+        List of dicts with user id, username, email, created_at, and file count.
+    """
+    db = get_session()
+    try:
+        from sqlalchemy import func
+        users = (
+            db.query(
+                User.id,
+                User.username,
+                User.email,
+                User.created_at,
+                func.count(File.id).label("file_count"),
+            )
+            .outerjoin(File, File.user_id == User.id)
+            .group_by(User.id)
+            .order_by(User.username)
+            .all()
+        )
+        return [
+            {
+                "id": u[0],
+                "username": u[1],
+                "email": u[2],
+                "created_at": u[3].isoformat() if u[3] else "",
+                "file_count": u[4],
+            }
+            for u in users
+        ]
+    except Exception as e:
+        print(f"Error getting users: {e}")
+        return []
+    finally:
+        db.close()

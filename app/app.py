@@ -44,10 +44,12 @@ app = rx.App(
 
 async def serve_file(request):
     """
-    Serve uploaded files for preview.
+    Serve uploaded files for preview and download.
     
     The URL path is like /api/files/1/uuid-filename.jpg
     which maps to /data/uploads/1/uuid-filename.jpg
+    
+    For downloads, pass ?download=1&filename=original_name.ext
     """
     upload_folder = os.environ.get("UPLOAD_FOLDER", "/data/uploads")
     
@@ -81,7 +83,22 @@ async def serve_file(request):
             status_code=404,
         )
     
-    return FileResponse(full_path)
+    # Check if this is a download request
+    download = request.query_params.get("download", "0")
+    filename = request.query_params.get("filename", None)
+    
+    headers = {}
+    if download == "1":
+        # Force download with Content-Disposition: attachment
+        if filename:
+            # Sanitize filename for header (RFC 5987)
+            import urllib.parse
+            encoded_filename = urllib.parse.quote(filename)
+            headers["Content-Disposition"] = f'attachment; filename="{filename}"; filename*=UTF-8\'\'{encoded_filename}'
+        else:
+            headers["Content-Disposition"] = "attachment"
+    
+    return FileResponse(full_path, headers=headers)
 
 
 # Add the file-serving route to the FastAPI/Starlette app
@@ -103,7 +120,11 @@ app.add_page(
     dashboard_page,
     route="/dashboard",
     title="ReQperacion - Mis archivos",
-    on_load=DashboardState.load_user_files,
+    on_load=[
+        DashboardState.load_user_files,
+        DashboardState.load_explore_files,
+        DashboardState.load_users,
+    ],
 )
 
 app.add_page(

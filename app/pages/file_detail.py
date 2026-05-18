@@ -1,6 +1,7 @@
 """Página de detalle de archivo para ReQperacion."""
 
 import os
+import urllib.parse
 import reflex as rx
 from app.styles.theme import (
     PASTEL_BLUE, PASTEL_BLUE_HOVER, DEEP_SOFT_BLUE, TEXT_PRIMARY, TEXT_SECONDARY,
@@ -8,7 +9,7 @@ from app.styles.theme import (
 )
 from app.components.navbar import navbar
 from app.components.file_card import get_file_icon, get_file_color
-from app.models import File, ExtractedText, FileTag, get_session
+from app.models import File, ExtractedText, FileTag, User, get_session
 
 
 # File types that support preview
@@ -70,19 +71,24 @@ class FileDetailState(rx.State):
 
     @rx.var
     def download_url(self) -> str:
-        """Computed var: path-only URL for file download (starts with /)."""
+        """Computed var: full URL for file download."""
         file_path = self.file_data.get("file_path", "")
-        upload_folder = os.environ.get("UPLOAD_FOLDER", "/data/uploads")
-        if file_path and file_path.startswith(upload_folder):
-            relative = file_path[len(upload_folder):].lstrip("/")
-            return f"/api/files/{relative}"
-        return ""
+        return _get_preview_url_from_path(file_path)
 
     def handle_download(self):
-        """Trigger file download."""
+        """Trigger file download via JavaScript."""
         url = self.download_url
         if url:
-            return rx.download(url=url)
+            filename = self.file_data.get("original_filename", "download")
+            # URL-encode filename for query parameter safety
+            filename_encoded = urllib.parse.quote(filename, safe="")
+            # Escape single quotes for JavaScript string safety
+            filename_escaped = filename.replace("'", "\\'")
+            # Append download params to force Content-Disposition: attachment
+            download_url = f"{url}?download=1&filename={filename_encoded}"
+            return rx.call_script(
+                f"const a=document.createElement('a');a.href='{download_url}';a.download='{filename_escaped}';document.body.appendChild(a);a.click();document.body.removeChild(a);"
+            )
 
     def load_file(self):
         """Load file details from database using route params."""
@@ -96,6 +102,10 @@ class FileDetailState(rx.State):
             if not file_record:
                 return rx.redirect("/dashboard")
 
+            # Get the uploader's username
+            uploader = db.query(User).filter(User.id == file_record.user_id).first()
+            uploader_username = uploader.username if uploader else "?"
+
             self.file_data = {
                 "id": file_record.id,
                 "original_filename": file_record.original_filename,
@@ -107,6 +117,7 @@ class FileDetailState(rx.State):
                 "uploaded_at": file_record.uploaded_at.isoformat() if file_record.uploaded_at else "",
                 "file_path": file_record.file_path,
                 "processing_status": file_record.processing_status,
+                "username": uploader_username,
             }
 
             # Get extracted text
@@ -380,8 +391,24 @@ def file_detail_page() -> rx.Component:
                                         font_size="0.85rem",
                                         color=TEXT_SECONDARY,
                                     ),
+                                    # Username (visible when exploring)
+                                    rx.cond(
+                                        FileDetailState.file_data.get("username", "") != "",
+                                        rx.hstack(
+                                            rx.icon(tag="user", font_size="0.75rem", color=DEEP_SOFT_BLUE),
+                                            rx.text(
+                                                FileDetailState.file_data.get("username", ""),
+                                                font_size="0.85rem",
+                                                color=DEEP_SOFT_BLUE,
+                                                font_weight="500",
+                                            ),
+                                            spacing="1",
+                                            align="center",
+                                        ),
+                                    ),
                                     spacing="3",
                                     align="center",
+                                    flex_wrap="wrap",
                                 ),
                                 spacing="1",
                             ),

@@ -3,7 +3,7 @@
 import os
 import reflex as rx
 from app.styles.theme import (
-    PASTEL_BLUE, PASTEL_BLUE_HOVER, TEXT_PRIMARY, TEXT_SECONDARY, WHITE, BORDER_LIGHT,
+    PASTEL_BLUE, PASTEL_BLUE_HOVER, DEEP_SOFT_BLUE, TEXT_PRIMARY, TEXT_SECONDARY, WHITE, BORDER_LIGHT,
     SOFT_BLUE, LIGHT_GRAY_BLUE,
 )
 
@@ -85,6 +85,7 @@ def file_card(file_data: dict, on_click, on_delete=None):
     status_color = _get_status_color(processing_status)
     status_label = _get_status_label(processing_status)
     file_id = file_data.get("id", 0)
+    username = file_data.get("username", "")
 
     return rx.box(
         # Blue left accent bar (visible on hover)
@@ -139,6 +140,17 @@ def file_card(file_data: dict, on_click, on_delete=None):
                         width="100%",
                         no_of_lines=1,
                     ),
+                    # Username (only shown when present, e.g. in explore tab)
+                    rx.cond(
+                        username != "",
+                        rx.text(
+                            f"Subido por {username}",
+                            font_size="0.7rem",
+                            color=DEEP_SOFT_BLUE,
+                            font_weight="500",
+                            width="100%",
+                        ),
+                    ),
                     spacing="1",
                     width="100%",
                 ),
@@ -179,27 +191,30 @@ def file_card(file_data: dict, on_click, on_delete=None):
                     border_radius="4px",
                 ),
                 rx.spacer(),
-                # Delete button (bottom-right)
-                rx.button(
-                    rx.icon(tag="trash_2", font_size="0.85rem", color=WHITE),
-                    on_click=on_delete,
-                    background_color="#E53E3E",
-                    border_radius="6px",
-                    padding="0.25rem",
-                    width="1.6rem",
-                    height="1.6rem",
-                    display="flex",
-                    align_items="center",
-                    justify_content="center",
-                    cursor="pointer",
-                    opacity="0.6",
-                    transition="all 0.2s ease",
-                    _hover={
-                        "background_color": "#C53030",
-                        "transform": "scale(1.1)",
-                        "opacity": "1",
-                        "box_shadow": "0 2px 8px rgba(229, 62, 62, 0.4)",
-                    },
+                # Delete button (bottom-right) - only shown when on_delete is provided
+                rx.cond(
+                    on_delete is not None,
+                    rx.button(
+                        rx.icon(tag="trash_2", font_size="0.85rem", color=WHITE),
+                        on_click=on_delete,
+                        background_color="#E53E3E",
+                        border_radius="6px",
+                        padding="0.25rem",
+                        width="1.6rem",
+                        height="1.6rem",
+                        display="flex",
+                        align_items="center",
+                        justify_content="center",
+                        cursor="pointer",
+                        opacity="0.6",
+                        transition="all 0.2s ease",
+                        _hover={
+                            "background_color": "#C53030",
+                            "transform": "scale(1.1)",
+                            "opacity": "1",
+                            "box_shadow": "0 2px 8px rgba(229, 62, 62, 0.4)",
+                        },
+                    ),
                 ),
                 spacing="2",
                 align="center",
